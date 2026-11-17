@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Auditor de Contrato de Locação · Lei 8.245/91</title>
+<style>
+  :root{
+    --bg:#0b1020; --bg2:#0e1428; --panel:#131a30; --panel2:#172039;
+    --line:#24304f; --txt:#e6ebf5; --muted:#8b98b8; --accent:#5b8cff;
+    --green:#21c07a; --red:#ff5d6c; --amber:#ffb020; --gray:#6b7899;
+    --hl:255,210,60;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:radial-gradient(1200px 600px at 10% -10%, #16224a 0%, var(--bg) 55%) fixed;
+    color:var(--txt); font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    min-height:100vh;
+  }
+  header{
+    display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:space-between;
+    padding:22px 28px; border-bottom:1px solid var(--line);
+    background:rgba(11,16,32,.7); backdrop-filter:blur(8px); position:sticky; top:0; z-index:10;
+  }
+  h1{font-size:17px; margin:0; letter-spacing:.2px}
+  h1 span{color:var(--accent)}
+  .sub{font-size:12.5px; color:var(--muted); margin-top:3px}
+  .lei-box{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+  .save-status{
+    font-size:11.5px; color:var(--muted); white-space:nowrap;
+    padding:6px 10px; border-radius:8px; background:var(--panel); border:1px solid var(--line);
+    transition:color .2s, border-color .2s;
+  }
+  .save-status.ok{color:var(--green); border-color:rgba(33,192,122,.35)}
+  .save-status.warn{color:var(--amber); border-color:rgba(255,176,32,.4)}
+  .lei-status{
+    font-size:12px; color:var(--muted); background:var(--panel);
+    border:1px solid var(--line); padding:8px 12px; border-radius:10px;
+  }
+  .lei-status code{color:var(--accent); font-size:11.5px}
+  .storage-warning{
+    display:none; background:rgba(255,176,32,.1);
+    border-bottom:1px solid rgba(255,176,32,.35);
+    color:var(--amber); padding:10px 28px; font-size:12px; line-height:1.5;
+  }
+  .storage-warning.show{display:block}
+  button{
+    font:inherit; font-size:13px; cursor:pointer; border-radius:10px;
+    border:1px solid var(--line); background:var(--panel2); color:var(--txt);
+    padding:9px 14px; transition:.15s; white-space:nowrap;
+  }
+  button:hover:not(:disabled){border-color:var(--accent); background:#1b2547}
+  button:disabled{opacity:.55; cursor:progress}
+  button.primary{background:linear-gradient(180deg,#4d7dff,#3f68e0); border-color:#3f68e0; font-weight:600}
+  button.primary:hover:not(:disabled){filter:brightness(1.12)}
+  button.ghost{background:transparent}
+  main{display:grid; grid-template-columns:1fr 1.15fr; gap:18px; padding:22px 28px 60px; align-items:start}
+  @media (max-width:1000px){ main{grid-template-columns:1fr} }
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden}
+  .panel-head{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:14px 16px; border-bottom:1px solid var(--line); background:var(--panel2);
+  }
+  .panel-head h2{font-size:13.5px; margin:0; letter-spacing:.4px; text-transform:uppercase; color:var(--muted)}
+  .panel-head .hint{font-size:11px; color:var(--muted)}
+  .panel-head .hint b{color:var(--accent)}
+  .editor-wrap{position:relative}
+  #contract{
+    position:relative; z-index:2; display:block;
+    width:100%; height:430px; resize:vertical; border:0; outline:0; padding:16px;
+    background:transparent; color:var(--txt);
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:12.5px; line-height:1.65;
+    overflow-y:auto; tab-size:8;
+    white-space:pre-wrap; overflow-wrap:break-word;
+  }
+  .hl-layer{
+    position:absolute; inset:0; z-index:1; pointer-events:none;
+    overflow:hidden; padding:16px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:12.5px; line-height:1.65;
+    color:transparent; white-space:pre-wrap; overflow-wrap:break-word;
+    tab-size:8; border:0;
+  }
+  .hl-layer mark{
+    background:rgba(var(--hl),.30); color:transparent; border-radius:3px;
+    box-shadow:0 0 0 1px rgba(var(--hl),.45);
+    transition:background .18s, box-shadow .18s;
+  }
+  .hl-layer mark.hover{background:rgba(var(--hl),.55); box-shadow:0 0 0 2px rgba(var(--hl),.55)}
+  .hl-layer mark.pulse{animation:hlPulse 1.3s ease-out}
+  @keyframes hlPulse{
+    0%   {background:rgba(var(--hl),.85); box-shadow:0 0 0 3px rgba(var(--hl),.55);}
+    60%  {background:rgba(var(--hl),.55); box-shadow:0 0 0 6px rgba(var(--hl),.10);}
+    100% {background:rgba(var(--hl),.30); box-shadow:0 0 0 1px rgba(var(--hl),.45);}
+  }
+  .actions{display:flex; gap:9px; flex-wrap:wrap; padding:14px 16px; border-top:1px solid var(--line)}
+  .file-label{
+    font:inherit; font-size:13px; cursor:pointer; border-radius:10px; padding:9px 14px;
+    border:1px solid var(--line); background:var(--panel2); color:var(--txt);
+  }
+  .file-label:hover{border-color:var(--accent)}
+  .file-label input{display:none}
+  .summary{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:16px; border-bottom:1px solid var(--line)}
+  @media (max-width:620px){ .summary{grid-template-columns:repeat(2,1fr)} }
+  .stat{background:var(--bg2); border:1px solid var(--line); border-radius:11px; padding:12px}
+  .stat b{display:block; font-size:22px; line-height:1.1}
+  .stat small{color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.6px}
+  .stat.d b{color:var(--red)} .stat.a b{color:var(--amber)}
+  .stat.c b{color:var(--green)} .stat.n b{color:var(--gray)}
+  #findings{padding:14px 16px 20px; display:flex; flex-direction:column; gap:11px; max-height:640px; overflow:auto}
+  .finding{
+    border:1px solid var(--line); border-left:4px solid var(--gray); border-radius:11px;
+    padding:13px 15px; background:var(--bg2);
+    transition:border-color .15s, box-shadow .15s, transform .15s;
+  }
+  .finding.clickable{cursor:pointer}
+  .finding.clickable:hover{transform:translateX(2px); box-shadow:0 6px 18px -10px rgba(91,140,255,.5)}
+  .finding.active{border-color:var(--accent); box-shadow:0 0 0 1px rgba(91,140,255,.35)}
+  .finding.st-divergente{border-left-color:var(--red)}
+  .finding.st-atencao{border-left-color:var(--amber)}
+  .finding.st-conforme{border-left-color:var(--green)}
+  .finding.st-nao_localizado{border-left-color:var(--gray)}
+  .f-head{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-bottom:9px}
+  .f-head h3{margin:0; font-size:13.5px}
+  .badge{font-size:10px; font-weight:700; letter-spacing:.7px; padding:3px 8px; border-radius:6px}
+  .st-divergente .badge{background:rgba(255,93,108,.15); color:var(--red)}
+  .st-atencao .badge{background:rgba(255,176,32,.15); color:var(--amber)}
+  .st-conforme .badge{background:rgba(33,192,122,.15); color:var(--green)}
+  .st-nao_localizado .badge{background:rgba(107,120,153,.18); color:var(--gray)}
+  .artigo{font-size:11px; color:var(--accent); background:rgba(91,140,255,.1); padding:3px 8px; border-radius:6px; margin-left:auto}
+  .jump{
+    font-size:10px; color:var(--accent); display:inline-flex; align-items:center; gap:4px;
+    border:1px solid rgba(91,140,255,.45); padding:2px 7px; border-radius:6px; margin-left:8px;
+    text-transform:uppercase; letter-spacing:.5px;
+    background:rgba(91,140,255,.08);
+  }
+  .finding.clickable:hover .jump{background:rgba(91,140,255,.2); border-color:var(--accent)}
+  .no-jump{
+    font-size:10px; color:var(--muted); display:inline-flex; align-items:center; gap:4px;
+    border:1px dashed var(--line); padding:2px 7px; border-radius:6px; margin-left:8px;
+    text-transform:uppercase; letter-spacing:.5px; opacity:.8;
+  }
+  .finding p{margin:0 0 7px; font-size:12.5px; line-height:1.6; color:#c3cde0}
+  .finding p:last-child{margin-bottom:0}
+  .finding strong{color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.5px}
+  .finding q{color:var(--txt); font-style:italic}
+  .empty{padding:50px 20px; text-align:center; color:var(--muted); font-size:13px; line-height:1.7}
+  .note{font-size:11.5px; color:var(--muted); padding:0 16px 16px; line-height:1.6}
+  #toast{
+    position:fixed; bottom:22px; left:50%; transform:translate(-50%,80px); opacity:0;
+    background:#1c2748; border:1px solid var(--accent); color:var(--txt); padding:11px 18px;
+    border-radius:10px; font-size:12.5px; transition:.28s; pointer-events:none; z-index:99;
+  }
+  #toast.show{transform:translate(-50%,0); opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Auditor de Contrato de Locação <span>· Lei 8.245/91</span></h1>
+    <div class="sub">Compara as cláusulas do contrato com os dispositivos da Lei do Inquilinato</div>
+  </div>
+  <div class="lei-box">
+    <div class="save-status" id="saveStatus">⚪ aguardando</div>
+    <div class="lei-status" id="leiStatus">
+      Lei 8.245/91 · versão consolidada · hash <code>a7f3c9e1</code>
+    </div>
+    <button id="btnLei">↻ Atualizar lei</button>
+  </div>
+</header>
+
+<div class="storage-warning" id="storageWarning">
+  ⚠️ <b>O navegador bloqueou o armazenamento local</b> — o texto não será salvo automaticamente.
+  Use <b>💾 Backup</b> para baixar o estado e <b>↺ Restaurar</b> para recuperá-lo depois.
+</div>
+
+<main>
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Contrato a auditar</h2>
+      <span class="sub"><span id="charCount">0</span> caracteres · <b>clique numa observação</b> à direita para pular até o trecho</span>
+    </div>
+    <div class="editor-wrap">
+      <div class="hl-layer" id="hlLayer" aria-hidden="true"></div>
+      <textarea id="contract" placeholder="Cole aqui o texto do contrato de locação, ou clique em 'Carregar exemplo'."></textarea>
+    </div>
+    <div class="actions">
+      <button id="btnClearAll" class="ghost">🧹 Limpar</button>
+      <button id="btnSample">Carregar exemplo</button>
+      <label class="file-label">Carregar .txt<input type="file" id="file" accept=".txt,.md"></label>
+      <button class="primary" id="btnAudit" style="margin-left:auto">Auditar contrato</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Divergências encontradas</h2>
+      <div style="display:flex; gap:8px; flex-wrap:wrap">
+        <button id="btnClear" style="padding:5px 11px; font-size:12px">Limpar destaques</button>
+        <button id="btnExport" style="padding:5px 11px; font-size:12px" title="Baixar backup completo (texto + resultado)">💾 Backup</button>
+        <button id="btnRestore" style="padding:5px 11px; font-size:12px" title="Restaurar de um arquivo de backup">↺ Restaurar</button>
+      </div>
+    </div>
+    <div class="summary" id="summary">
+      <div class="stat d"><b>–</b><small>Divergentes</small></div>
+      <div class="stat a"><b>–</b><small>Atenção</small></div>
+      <div class="stat c"><b>–</b><small>Conformes</small></div>
+      <div class="stat n"><b>–</b><small>Não localizado</small></div>
+    </div>
+    <div id="findings">
+      <div class="empty">
+        Nenhuma auditoria executada ainda.<br>
+        Cole um contrato ou clique em <strong>Carregar exemplo</strong>.
+      </div>
+    </div>
+    <p class="note">
+      ⚠️ Protótipo com motor de regras determinístico. A verificação é um <em>indício</em> de
+      inconformidade — não substitui a análise de um advogado. Em produção, cada regra é
+      substituída por uma consulta ao pipeline RAG sobre o texto oficial da lei.
+    </p>
+  </section>
+</main>
+
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   1. FONTE DA LEI
+   ============================================================ */
+const LEI = {
+  nome: 'Lei nº 8.245/1991',
+  fonte: 'planalto.gov.br/ccivil_03/leis/l8245.htm',
+  versao: 'consolidada',
+  hash: 'a7f3c9e1'
+};
+
+/* ============================================================
+   2. UTILITÁRIOS
+   ============================================================ */
+const normalize = s =>
+  s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function blocksOf(text){
+  if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+    const seg = new Intl.Segmenter('pt-BR', { granularity: 'sentence' });
+    return [...seg.segment(text)].map(s => s.segment.trim()).filter(Boolean);
+  }
+  return text.split(/\n+/).map(s => s.trim()).filter(Boolean);
+}
+function firstBlock(ctx, pred){
+  for (let i = 0; i < ctx.nblocks.length; i++){
+    if (pred(ctx.nblocks[i], ctx.blocks[i])) return ctx.blocks[i];
+  }
+  return null;
+}
+const cut = (s, n = 240) => !s ? null : (s.length > n ? s.slice(0, n).trim() + '…' : s);
+
+/* ============================================================
+   2.1 LOCALIZADOR ROBUSTO DE EVIDÊNCIA
+   Retorna {start, end} ou null.
+   Estratégias em ordem: exato → trim → case-insensitive
+   ============================================================ */
+function findEvidenceRange(text, evidence){
+  if (!evidence || !text) return null;
+
+  // 1) match exato
+  let idx = text.indexOf(evidence);
+  if (idx !== -1) return { start: idx, end: idx + evidence.length };
+
+  // 2) match após trim
+  const trimmed = evidence.trim();
+  if (trimmed && trimmed !== evidence){
+    idx = text.indexOf(trimmed);
+    if (idx !== -1) return { start: idx, end: idx + trimmed.length };
+  }
+
+  // 3) case-insensitive
+  const lowerText = text.toLowerCase();
+  const lowerEv = (trimmed || evidence).toLowerCase();
+  idx = lowerText.indexOf(lowerEv);
+  if (idx !== -1) return { start: idx, end: idx + lowerEv.length };
+
+  return null;
+}
+
+/* ============================================================
+   3. PERSISTÊNCIA
+   ============================================================ */
+const STORAGE_KEY = 'auditor-locacao-v1';
+
+const storageOK = (function(){
+  try {
+    const k = '__auditor_test__';
+    localStorage.setItem(k, '1');
+    localStorage.removeItem(k);
+    return true;
+  } catch(e){
+    console.warn('[Auditor] localStorage indisponível:', e.message);
+    return false;
+  }
+})();
+
+let lastResult = null;
+let lastAuditedText = null;
+let lastSaveTime = null;
+
+function updateSaveIndicator(){
+  const el = document.getElementById('saveStatus');
+  if (!el) return;
+  if (!storageOK){
+    el.textContent = '⚠️ sem persistência';
+    el.className = 'save-status warn';
+  } else if (lastSaveTime){
+    el.textContent = '💾 salvo ' + lastSaveTime.toLocaleTimeString('pt-BR');
+    el.className = 'save-status ok';
+  } else {
+    el.textContent = '⚪ aguardando';
+    el.className = 'save-status';
+  }
+}
+
+if (!storageOK){
+  const warn = document.getElementById('storageWarning');
+  if (warn) warn.classList.add('show');
+}
+
+function saveState(){
+  if (!storageOK){ updateSaveIndicator(); return; }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      text: contractEl.value,
+      result: lastResult,
+      auditedText: lastAuditedText
+    }));
+    lastSaveTime = new Date();
+    updateSaveIndicator();
+  } catch(e){
+    console.error('[Auditor] Falha ao salvar:', e);
+    updateSaveIndicator();
+  }
+}
+function loadState(){
+  if (!storageOK) return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e){ return null; }
+}
+function clearState(){
+  try { localStorage.removeItem(STORAGE_KEY); } catch(e){}
+  lastSaveTime = null;
+  updateSaveIndicator();
+}
+
+/* ============================================================
+   4. REGRAS DE AUDITORIA (Lei 8.245/91)
+   ============================================================ */
+const RULES = [
+  {
+    id:'R1', tema:'Modalidade de garantia', artigo:'Art. 37',
+    lei:'É vedada, sob pena de nulidade, a exigência de mais de uma modalidade de garantia em um mesmo contrato de locação.',
+    rec:'Manter apenas uma garantia: caução, fiança, seguro-fiança ou cessão fiduciária.',
+    check(ctx){
+      const t = ctx.norm;
+      const semSeguro = t.replace(/seguro[-\s]?fian[cç]a/g, ' ');
+      const mods = [];
+      if (/\bcau[cç][aã]o\b/.test(semSeguro))          mods.push('caução');
+      if (/\bfiador\b|\bfian[cç]a\b/.test(semSeguro))  mods.push('fiança');
+      if (/seguro[-\s]?fian[cç]a/.test(t))             mods.push('seguro-fiança');
+      if (/cess[aã]o\s+fiduci[aá]ria/.test(t))         mods.push('cessão fiduciária');
+      if (mods.length >= 2){
+        const ev = firstBlock(ctx, nb => {
+          const s = nb.replace(/seguro[-\s]?fian[cç]a/g, ' ');
+          let c = 0;
+          if (/\bcau[cç][aã]o\b/.test(s)) c++;
+          if (/\bfiador\b|\bfian[cç]a\b/.test(s)) c++;
+          if (/seguro[-\s]?fian[cç]a/.test(nb)) c++;
+          if (/cess[aã]o\s+fiduci[aá]ria/.test(nb)) c++;
+          return c >= 2;
+        });
+        return { status:'divergente',
+          evidencia: ev || firstBlock(ctx, nb => /\bcau[cç][aã]o\b|\bfiador\b/.test(nb)),
+          nota:`Foram identificadas ${mods.length} modalidades simultâneas: ${mods.join(' + ')}.` };
+      }
+      if (mods.length === 1){
+        return { status:'conforme',
+          evidencia: firstBlock(ctx, nb =>
+            /\bcau[cç][aã]o\b|\bfiador\b|\bfian[cç]a\b|seguro[-\s]?fian/.test(nb)),
+          nota:`Apenas uma modalidade exigida: ${mods[0]}.` };
+      }
+      return { status:'nao_localizado', evidencia:null,
+        nota:'Não foi localizada cláusula de garantia locatícia.' };
+    }
+  },
+
+  {
+    id:'R2', tema:'Índice e periodicidade de reajuste', artigo:'Art. 17 e 18',
+    lei:'É nula a cláusula de reajuste vinculada ao salário mínimo ou à moeda estrangeira; o reajuste deve observar periodicidade mínima de 12 meses e índice de preços.',
+    rec:'Usar índice de preços (IGP-M, IPCA, INPC) com periodicidade anual.',
+    check(ctx){
+      const t = ctx.norm;
+      const probs = [];
+      if (/salario\s+minimo/.test(t) && /reajust/.test(t))  probs.push('indexação ao salário mínimo');
+      if (/(moeda\s+estrangeira|dolar|us\$)/.test(t) && /aluguel/.test(t)) probs.push('indexação a moeda estrangeira');
+      if (/reajuste\s+(mensal|bimestral|trimestral|semestral)/.test(t))   probs.push('periodicidade inferior a 12 meses');
+      const m = t.match(/a\s+cada\s+(\d{1,2})\s*(?:\([a-z]+\)\s*)?meses/);
+      if (m && parseInt(m[1],10) < 12) probs.push(`reajuste a cada ${m[1]} meses`);
+      if (probs.length){
+        return { status:'divergente',
+          evidencia: firstBlock(ctx, nb => /reajust/.test(nb)),
+          nota:`Problemas encontrados: ${probs.join('; ')}.` };
+      }
+      if (/reajust/.test(t) && /(igp|ipca|inpc|ipc|indice)/.test(t)){
+        return { status:'conforme', evidencia: firstBlock(ctx, nb => /reajust/.test(nb)),
+          nota:'Reajuste vinculado a índice de preços.' };
+      }
+      return { status:'atencao', evidencia: firstBlock(ctx, nb => /reajust/.test(nb)),
+        nota:'Cláusula de reajuste não identificada de forma clara.' };
+    }
+  },
+
+  {
+    id:'R3', tema:'Multa por devolução antecipada', artigo:'Art. 4º',
+    lei:'A multa por devolução antecipada deve ser proporcional ao período restante do contrato, limitada a 3 aluguéis.',
+    rec:'Prever multa proporcional ao tempo restante, nunca valor fixo desproporcional.',
+    check(ctx){
+      const t = ctx.norm;
+      const temMulta = /multa/.test(t);
+      const temRescisao = /(rescisao|devolucao\s+antecipada|desocupacao\s+antecipada|devolver\s+o\s+imovel\s+antes)/.test(t);
+      const proporcional = /(proporcional|pro\s+rata|restante\s+do\s+prazo|periodo\s+restante)/.test(t);
+      const mv = t.match(/multa[^.]{0,120}?(\d{1,2})\s*(?:\([a-z ]+\)\s*)?alug/);
+      const n = mv ? parseInt(mv[1], 10) : null;
+      if (temMulta && temRescisao && n && n > 3){
+        return { status:'divergente',
+          evidencia: firstBlock(ctx, nb => /multa/.test(nb) && /alug/.test(nb)),
+          nota:`Multa de ${n} aluguéis excede o limite legal de 3 aluguéis (proporcional).` };
+      }
+      if (temMulta && temRescisao && !proporcional){
+        return { status:'atencao', evidencia: firstBlock(ctx, nb => /multa/.test(nb)),
+          nota:'Multa prevista sem critério de proporcionalidade explícito.' };
+      }
+      if (temMulta && proporcional){
+        return { status:'conforme', evidencia: firstBlock(ctx, nb => /multa/.test(nb)),
+          nota:'Multa com critério de proporcionalidade.' };
+      }
+      return { status:'nao_localizado', evidencia:null,
+        nota:'Sem cláusula de multa por devolução antecipada.' };
+    }
+  },
+
+  {
+    id:'R4', tema:'IPTU e seguro contra incêndio', artigo:'Art. 22, VIII',
+    lei:'Compete ao locador pagar impostos, taxas e o prêmio do seguro contra incêndio. O repasse do IPTU ao locatário só vale com cláusula expressa.',
+    rec:'Retirar do inquilino o ônus do seguro contra incêndio; se houver repasse de IPTU, prever expressamente.',
+    check(ctx){
+      const t = ctx.norm;
+      const seguroInquilino =
+        /seguro\s+(contra\s+)?incendio/.test(t) &&
+        /(inquilino|locatario)/.test(t) &&
+        /(pagara|contratara|a\s+cargo|obriga|premio)/.test(t);
+      if (seguroInquilino){
+        return { status:'divergente',
+          evidencia: firstBlock(ctx, nb => /seguro/.test(nb) && /incendio/.test(nb)),
+          nota:'O prêmio do seguro contra incêndio é encargo do locador — não pode ser transferido.' };
+      }
+      const iptuInquilino = /iptu/.test(t) && /(inquilino|locatario)/.test(t) &&
+        /(pagara|a\s+cargo|responsavel|repassad|obriga)/.test(t);
+      if (iptuInquilino){
+        return { status:'atencao', evidencia: firstBlock(ctx, nb => /iptu/.test(nb)),
+          nota:'Repasse de IPTU ao locatário exige cláusula expressa e critério claro.' };
+      }
+      return { status:'nao_localizado', evidencia:null,
+        nota:'Sem cláusula sobre IPTU ou seguro contra incêndio.' };
+    }
+  },
+
+  {
+    id:'R5', tema:'Estado do imóvel na devolução', artigo:'Art. 23, III',
+    lei:'O locatário devolve o imóvel no estado em que o recebeu, ressalvado o desgaste natural do uso.',
+    rec:'Acrescentar ressalva expressa ao desgaste natural e à depreciação pelo uso regular.',
+    check(ctx){
+      const t = ctx.norm;
+      const exigencia = /(como\s+novo|estado\s+de\s+novo|perfeito\s+estado|mesmas\s+condicoes\s+em\s+que\s+recebeu|melhor\s+do\s+que\s+recebeu)/.test(t);
+      const ressalva = /(desgaste\s+natural|uso\s+normal|depreciacao)/.test(t);
+      if (exigencia && !ressalva){
+        return { status:'divergente',
+          evidencia: firstBlock(ctx, nb => /(como\s+novo|perfeito\s+estado|estado\s+de\s+novo)/.test(nb)),
+          nota:'Exigência de devolução "como novo" ignora o desgaste natural — cláusula abusiva.' };
+      }
+      if (exigencia && ressalva){
+        return { status:'atencao',
+          evidencia: firstBlock(ctx, nb => /(como\s+novo|perfeito\s+estado)/.test(nb)),
+          nota:'Há exigência de conservação, mas com ressalva de desgaste — verificar redação.' };
+      }
+      return { status:'nao_localizado', evidencia:null,
+        nota:'Sem cláusula específica sobre estado de devolução.' };
+    }
+  },
+
+  {
+    id:'R6', tema:'Indenização por benfeitorias', artigo:'Art. 35 e 36',
+    lei:'O locatário tem direito à indenização por benfeitorias necessárias e, se autorizadas, pelas úteis.',
+    rec:'Remover renúncia prévia à indenização por benfeitorias necessárias.',
+    check(ctx){
+      const t = ctx.norm;
+      const temBenf = /benfeitoria/.test(t);
+      const renuncia = /(renunci|nao\s+tera\s+direito|sem\s+direito\s+a\s+indenizacao|isencao\s+de\s+indenizacao|abdica)/.test(t);
+      if (temBenf && renuncia){
+        return { status:'divergente',
+          evidencia: firstBlock(ctx, nb => /benfeitoria/.test(nb)),
+          nota:'Renúncia prévia a indenização por benfeitorias necessárias é nula.' };
+      }
+      if (temBenf){
+        return { status:'conforme', evidencia: firstBlock(ctx, nb => /benfeitoria/.test(nb)),
+          nota:'Cláusula de benfeitorias sem renúncia identificada.' };
+      }
+      return { status:'nao_localizado', evidencia:null, nota:'Sem cláusula de benfeitorias.' };
+    }
+  },
+
+  {
+    id:'R7', tema:'Prorrogação e renovação', artigo:'Art. 45 a 47',
+    lei:'São nulas as cláusulas que visem impedir a prorrogação legal ou o direito de renovação.',
+    rec:'Suprimir qualquer vedação genérica à prorrogação ou renúncia antecipada à renovação.',
+    check(ctx){
+      const t = ctx.norm;
+      const proibicao =
+        /(nao\s+prorrogavel|vedada\s+a\s+prorrogacao|renunci[ac]ia?\s+a\s+renovacao|impede\s+a\s+renovacao|abdica\s+do\s+direito\s+de\s+renovacao|sem\s+direito\s+a\s+renovacao|nao\s+renovavel)/.test(t);
+      if (proibicao){
+        return { status:'divergente',
+          evidencia: firstBlock(ctx, nb => /prorrog|renovac/.test(nb)),
+          nota:'Cláusula restritiva de prorrogação/renovação é nula de pleno direito.' };
+      }
+      return { status:'conforme', evidencia:null,
+        nota:'Nenhuma cláusula restritiva de prorrogação ou renovação localizada.' };
+    }
+  },
+
+  {
+    id:'R8', tema:'Vistoria do imóvel', artigo:'Art. 22, IV',
+    lei:'O locador deve entregar o imóvel com laudo de vistoria; o estado inicial é o parâmetro da devolução.',
+    rec:'Incluir cláusula de vistoria de entrada e de saída, com laudo anexo.',
+    check(ctx){
+      const t = ctx.norm;
+      if (/vistoria/.test(t)){
+        return { status:'conforme', evidencia: firstBlock(ctx, nb => /vistoria/.test(nb)),
+          nota:'Contrato prevê vistoria.' };
+      }
+      return { status:'atencao', evidencia:null,
+        nota:'Não foi localizada cláusula de vistoria — recomendável incluir.' };
+    }
+  },
+
+  {
+    id:'R9', tema:'Prazo e valor do aluguel', artigo:'Art. 46',
+    lei:'O contrato deve conter prazo de vigência e valor do aluguel de forma expressa.',
+    rec:'Explicitar prazo, data de início e valor mensal.',
+    check(ctx){
+      const t = ctx.norm;
+      const prazo = /(prazo\s+de\s+\d+|vigorara|vigencia\s+de|\d+\s*(?:\([a-z]+\)\s*)?meses)/.test(t);
+      const valor = /(r\$\s*[\d.,]+|aluguel\s+mensal\s+de)/.test(t);
+      if (prazo && valor){
+        return { status:'conforme', evidencia: firstBlock(ctx, nb => /prazo\s+de|vigorara/.test(nb)),
+          nota:'Prazo e valor identificados.' };
+      }
+      return { status:'atencao', evidencia:null,
+        nota:`${!prazo ? 'Prazo não identificado. ' : ''}${!valor ? 'Valor do aluguel não identificado.' : ''}`.trim() };
+    }
+  },
+
+  {
+    id:'R10', tema:'Foro de eleição', artigo:'Art. 58',
+    lei:'A eleição de foro é permitida, mas pode ser afastada em determinadas ações; verificar se não inviabiliza a defesa do locatário.',
+    rec:'Avaliar se o foro eleito é acessível ao locatário; caso contrário, indicar a comarca do imóvel.',
+    check(ctx){
+      const t = ctx.norm;
+      if (/(foro\s+de\s+eleicao|eleicao\s+de\s+foro|fica\s+eleito\s+o\s+foro|foro\s+da\s+comarca)/.test(t)){
+        return { status:'atencao', evidencia: firstBlock(ctx, nb => /foro/.test(nb)),
+          nota:'Há foro de eleição — confirmar se não restringe o acesso à justiça.' };
+      }
+      return { status:'nao_localizado', evidencia:null, nota:'Sem cláusula de foro.' };
+    }
+  }
+];
+
+/* ============================================================
+   5. MOTOR DE AUDITORIA
+   ============================================================ */
+function audit(text){
+  const blocks = blocksOf(text);
+  const ctx = { raw: text, norm: normalize(text), blocks, nblocks: blocks.map(normalize) };
+  return RULES.map(r => {
+    const out = r.check(ctx);
+    return {
+      id: r.id, tema: r.tema, artigo: r.artigo, lei: r.lei, rec: r.rec,
+      status: out.status,
+      evidencia: out.evidencia || null,
+      nota: out.nota || ''
+    };
+  });
+}
+
+/* ============================================================
+   6. HIGHLIGHT / NAVEGAÇÃO
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const contractEl = $('contract');
+const hlLayer    = $('hlLayer');
+const findingsEl = $('findings');
+const summaryEl  = $('summary');
+const toastEl    = $('toast');
+
+function syncScrollbarPadding(){
+  const sb = Math.max(0, contractEl.offsetWidth - contractEl.clientWidth);
+  hlLayer.style.paddingRight = (16 + sb) + 'px';
+}
+function syncScroll(){
+  hlLayer.scrollTop  = contractEl.scrollTop;
+  hlLayer.scrollLeft = contractEl.scrollLeft;
+}
+
+function buildHighlights(text, findings){
+  const ranges = [];
+  for (const f of findings){
+    if (!f.evidencia) continue;
+    const r = findEvidenceRange(text, f.evidencia);
+    if (r) ranges.push({ start: r.start, end: r.end, fid: f.id });
+  }
+  ranges.sort((a, b) => a.start - b.start);
+  const clean = [];
+  for (const r of ranges){
+    if (clean.length === 0){ clean.push({ ...r }); continue; }
+    const last = clean[clean.length - 1];
+    if (r.start === last.start && r.end === last.end) last.fid += ' ' + r.fid;
+    else if (r.start >= last.end) clean.push({ ...r });
+  }
+  let html = '';
+  let cursor = 0;
+  for (const r of clean){
+    if (r.start > cursor) html += esc(text.slice(cursor, r.start));
+    const firstId = r.fid.split(' ')[0];
+    html += `<mark data-fid="${r.fid}" id="hl-${firstId}">${esc(text.slice(r.start, r.end))}</mark>`;
+    cursor = r.end;
+  }
+  if (cursor < text.length) html += esc(text.slice(cursor));
+  return html;
+}
+function applyHighlights(text, findings){
+  hlLayer.innerHTML = buildHighlights(text, findings);
+  syncScrollbarPadding(); syncScroll();
+}
+function clearHighlights(){ hlLayer.innerHTML = ''; }
+
+function scrollToFinding(fid){
+  const mark = hlLayer.querySelector(`[data-fid~="${fid}"]`);
+  if (!mark){
+    toast('Este item não tem trecho específico no contrato (verificação de ausência).');
+    return;
+  }
+  const markRect  = mark.getBoundingClientRect();
+  const layerRect = hlLayer.getBoundingClientRect();
+  const relativeTop = markRect.top - layerRect.top;
+  contractEl.scrollTo({ top: contractEl.scrollTop + relativeTop - 40, behavior: 'smooth' });
+  mark.classList.remove('pulse');
+  void mark.offsetWidth;
+  mark.classList.add('pulse');
+  setTimeout(() => mark.classList.remove('pulse'), 1400);
+}
+
+/* ============================================================
+   7. UI
+   ============================================================ */
+const LABEL = {
+  divergente: 'DIVERGENTE',
+  atencao: 'ATENÇÃO',
+  conforme: 'CONFORME',
+  nao_localizado: 'NÃO LOCALIZADO'
+};
+const ORDER = { divergente:0, atencao:1, nao_localizado:2, conforme:3 };
+
+const EMPTY_SUMMARY = `
+  <div class="stat d"><b>–</b><small>Divergentes</small></div>
+  <div class="stat a"><b>–</b><small>Atenção</small></div>
+  <div class="stat c"><b>–</b><small>Conformes</small></div>
+  <div class="stat n"><b>–</b><small>Não localizado</small></div>`;
+
+const EMPTY_FINDINGS = `<div class="empty">
+  Nenhuma auditoria executada ainda.<br>
+  Cole um contrato ou clique em <strong>Carregar exemplo</strong>.
+</div>`;
+
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => toastEl.classList.remove('show'), 2800);
+}
+
+function cardHTML(f, hasEvidence){
+  const ev = f.evidencia
+    ? `<p><strong>Evidência no contrato</strong><br><q>${esc(cut(f.evidencia, 240))}</q></p>`
+    : `<p><strong>Evidência no contrato</strong><br><em style="color:#6b7899">não localizada</em></p>`;
+  const nota = f.nota ? `<p><strong>Análise</strong><br>${esc(f.nota)}</p>` : '';
+  const rec = (f.status === 'divergente' || f.status === 'atencao')
+    ? `<p><strong>Recomendação</strong><br>${esc(f.rec)}</p>` : '';
+
+  const jump = hasEvidence
+    ? `<span class="jump">↗ ir ao texto</span>`
+    : `<span class="no-jump" title="Esta verificação detecta ausência de cláusula — não há trecho específico no contrato para o qual pular.">🔍 verificação de ausência</span>`;
+
+  const cls  = hasEvidence ? 'clickable' : '';
+  return `
+    <article class="finding st-${f.status} ${cls}" data-fid="${f.id}">
+      <div class="f-head">
+        <span class="badge">${LABEL[f.status]}</span>
+        <h3>${esc(f.tema)}</h3>
+        <span class="artigo">${esc(f.artigo)}</span>
+        ${jump}
+      </div>
+      <p><strong>O que diz a lei</strong><br>${esc(f.lei)}</p>
+      ${ev}${nota}${rec}
+    </article>`;
+}
+
+function render(findings, contractText){
+  const c = { divergente:0, atencao:0, conforme:0, nao_localizado:0 };
+  findings.forEach(f => c[f.status]++);
+  summaryEl.innerHTML = `
+    <div class="stat d"><b>${c.divergente}</b><small>Divergentes</small></div>
+    <div class="stat a"><b>${c.atencao}</b><small>Atenção</small></div>
+    <div class="stat c"><b>${c.conforme}</b><small>Conformes</small></div>
+    <div class="stat n"><b>${c.nao_localizado}</b><small>Não localizado</small></div>`;
+
+  const sorted = [...findings].sort((a, b) => ORDER[a.status] - ORDER[b.status]);
+  findingsEl.innerHTML = sorted.map(f => {
+    const hasEvidence = !!findEvidenceRange(contractText, f.evidencia);
+    return cardHTML(f, hasEvidence);
+  }).join('');
+
+  findingsEl.querySelectorAll('.finding.clickable').forEach(card => {
+    const fid = card.dataset.fid;
+    card.addEventListener('click', () => {
+      findingsEl.querySelectorAll('.finding').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      scrollToFinding(fid);
+    });
+    card.addEventListener('mouseenter', () => {
+      const m = hlLayer.querySelector(`[data-fid~="${fid}"]`);
+      if (m) m.classList.add('hover');
+    });
+    card.addEventListener('mouseleave', () => {
+      const m = hlLayer.querySelector(`[data-fid~="${fid}"]`);
+      if (m) m.classList.remove('hover');
+    });
+  });
+}
+
+/* ---------- Ações ---------- */
+$('btnSample').addEventListener('click', () => {
+  contractEl.value = SAMPLE;
+  clearHighlights();
+  lastResult = null;
+  lastAuditedText = null;
+  updateCount();
+  saveState();
+  toast('Contrato de exemplo carregado.');
+});
+
+$('file').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    contractEl.value = ev.target.result;
+    clearHighlights();
+    updateCount();
+    saveState();
+    toast(`Arquivo "${f.name}" carregado.`);
+  };
+  reader.readAsText(f, 'utf-8');
+});
+
+$('btnAudit').addEventListener('click', () => {
+  const text = contractEl.value.trim();
+  if (text.length < 120){
+    toast('Cole um contrato com pelo menos algumas cláusulas para auditar.');
+    return;
+  }
+  const btn = $('btnAudit');
+  btn.disabled = true;
+  btn.textContent = 'Auditando…';
+  findingsEl.innerHTML = '<div class="empty">Processando cláusulas e confrontando com a Lei 8.245/91…</div>';
+  clearHighlights();
+
+  setTimeout(() => {
+    lastResult = audit(text);
+    lastAuditedText = text;
+    render(lastResult, text);
+    applyHighlights(text, lastResult);
+    saveState();
+    btn.disabled = false;
+    btn.textContent = 'Auditar contrato';
+    const div = lastResult.filter(f => f.status === 'divergente').length;
+    toast(`Auditoria concluída · ${div} divergência(s) encontrada(s).`);
+  }, 550);
+});
+
+$('btnClearAll').addEventListener('click', () => {
+  contractEl.value = '';
+  clearHighlights();
+  lastResult = null;
+  lastAuditedText = null;
+  clearState();
+  updateCount();
+  summaryEl.innerHTML = EMPTY_SUMMARY;
+  findingsEl.innerHTML = EMPTY_FINDINGS;
+  const btn = $('btnAudit');
+  btn.disabled = false;
+  btn.textContent = 'Auditar contrato';
+  toast('Tudo limpo — contrato, resultados e armazenamento local.');
+});
+
+$('btnClear').addEventListener('click', () => {
+  clearHighlights();
+  findingsEl.querySelectorAll('.finding.active').forEach(c => c.classList.remove('active'));
+  toast('Destaques removidos.');
+});
+
+$('btnLei').addEventListener('click', () => {
+  const btn = $('btnLei');
+  btn.disabled = true;
+  $('leiStatus').innerHTML = 'Verificando fonte oficial…';
+  setTimeout(() => {
+    const agora = new Date().toLocaleString('pt-BR');
+    $('leiStatus').innerHTML =
+      `Lei 8.245/91 · ${LEI.versao} · hash <code>${LEI.hash}</code> · verificado ${agora}`;
+    btn.disabled = false;
+    toast('Nenhuma alteração detectada na Lei 8.245/91.');
+  }, 1100);
+});
+
+$('btnExport').addEventListener('click', () => {
+  if (!contractEl.value.trim() && !lastResult){
+    toast('Nada para exportar.');
+    return;
+  }
+  const payload = {
+    tipo: 'auditor-locacao-backup',
+    fonte: LEI.nome, versaoLei: LEI.versao, hashLei: LEI.hash,
+    textoContrato: contractEl.value,
+    resultado: lastResult,
+    auditadoEm: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Backup_Locacao_[nome da locacao]_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Backup baixado.');
+});
+
+$('btnRestore').addEventListener('click', () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.textoContrato !== undefined) contractEl.value = data.textoContrato;
+        updateCount();
+        if (Array.isArray(data.resultado) && data.resultado.length){
+          lastResult = data.resultado;
+          lastAuditedText = data.textoContrato || null;
+          render(lastResult, contractEl.value);
+          applyHighlights(contractEl.value, lastResult);
+        } else {
+          lastResult = null;
+          lastAuditedText = null;
+          clearHighlights();
+          summaryEl.innerHTML = EMPTY_SUMMARY;
+          findingsEl.innerHTML = EMPTY_FINDINGS;
+        }
+        saveState();
+        toast('Backup restaurado.');
+      } catch(err){
+        console.error(err);
+        toast('Arquivo inválido.');
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+  };
+  input.click();
+});
+
+contractEl.addEventListener('input', () => {
+  if (hlLayer.innerHTML) clearHighlights();
+  updateCount();
+  saveState();
+});
+contractEl.addEventListener('scroll', syncScroll);
+contractEl.addEventListener('blur', saveState);
+if (typeof ResizeObserver !== 'undefined'){
+  new ResizeObserver(syncScrollbarPadding).observe(contractEl);
+}
+function updateCount(){ $('charCount').textContent = contractEl.value.length; }
+
+syncScrollbarPadding();
+updateCount();
+updateSaveIndicator();
+
+window.addEventListener('beforeunload', saveState);
+window.addEventListener('pagehide', saveState);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') saveState();
+});
+
+(function restore(){
+  const saved = loadState();
+  if (!saved || !saved.text){ updateSaveIndicator(); return; }
+  contractEl.value = saved.text;
+  updateCount();
+  if (Array.isArray(saved.result) && saved.result.length){
+    lastResult = saved.result;
+    lastAuditedText = saved.auditedText || null;
+    render(lastResult, saved.text);
+    applyHighlights(saved.text, lastResult);
+    if (lastAuditedText && lastAuditedText !== saved.text){
+      setTimeout(() => toast('Backup restaurado, mas o contrato foi editado depois da auditoria — re-audite.'), 800);
+    }
+  }
+  updateSaveIndicator();
+})();
+
+/* ============================================================
+   8. CONTRATO DE EXEMPLO
+   ============================================================ */
+const SAMPLE = `CONTRATO DE LOCAÇÃO RESIDENCIAL
+
+LOCADOR: João da Silva, CPF 000.000.000-00.
+LOCATÁRIO: Maria Souza, CPF 111.111.111-11.
+OBJETO: imóvel situado na Rua das Flores, 123, apto 45, São Paulo/SP.
+
+CLÁUSULA 1ª - PRAZO: A locação vigorará pelo prazo de 30 (trinta) meses, com início em 01/03/2025.
+
+CLÁUSULA 2ª - ALUGUEL: O valor mensal do aluguel é de R$ 2.500,00 (dois mil e quinhentos reais).
+
+CLÁUSULA 3ª - GARANTIA: O LOCATÁRIO entrega, nesta data, caução equivalente a 3 (três) aluguéis, no valor de R$ 7.500,00, e apresenta como fiador Carlos Pereira, CPF 222.222.222-22.
+
+CLÁUSULA 4ª - REAJUSTE: O aluguel será reajustado a cada 6 (seis) meses pelo IGP-M.
+
+CLÁUSULA 5ª - RESCISÃO: Em caso de devolução antecipada do imóvel, o LOCATÁRIO pagará multa de 5 (cinco) aluguéis.
+
+CLÁUSULA 6ª - SEGURO: O LOCATÁRIO deverá contratar e pagar o prêmio do seguro contra incêndio do imóvel.
+
+CLÁUSULA 7ª - DEVOLUÇÃO: O imóvel deverá ser devolvido como novo, em perfeito estado de conservação.
+
+CLÁUSULA 8ª - BENFEITORIAS: O LOCATÁRIO renuncia a qualquer indenização por benfeitorias realizadas no imóvel.
+
+CLÁUSULA 9ª - FORO: Fica eleito o foro da Comarca de São Paulo/SP para dirimir questões oriundas deste contrato.`;
+</script>
+</body>
+</html>

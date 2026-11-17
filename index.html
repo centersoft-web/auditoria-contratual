@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auditoria Contratual by Center Soft Inc.®</title>
+    <link rel="icon" href="icon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="icon.ico" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #060b1a;
+            --accent: #d4af37;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: var(--bg-deep);
+            display: flex; height: 100vh; color: white; overflow: hidden;
+        }
+
+        /* Fundo temático: livros de direito + martelo, alinhado à ideia de auditoria jurídica */
+        .fundo-background {
+            position: fixed;
+            inset: 0;
+            background-image: linear-gradient(135deg, rgba(6, 11, 26, 0.95) 0%, rgba(10, 25, 47, 0.88) 100%),
+                              url('https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            z-index: -1;
+        }
+
+        .titulo-master {
+            font-family: 'Cinzel', serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            background: linear-gradient(180deg, #ffffff 30%, #a1a1a1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0px 3px 10px rgba(0,0,0,0.6));
+            margin-bottom: 5px;
+        }
+
+        .subtitulo-master {
+            letter-spacing: 0.5em;
+            font-size: 0.55rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            opacity: 0.7;
+        }
+
+        #login-overlay {
+            position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+            z-index: 1000; backdrop-filter: blur(20px); transition: all 0.6s ease;
+        }
+
+        .glass-card {
+            background: rgba(10, 20, 40, 0.7);
+            padding: 35px; border-radius: 2px;
+            border: 1px solid rgba(255,255,255,0.05); text-align: center;
+            width: 320px; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
+        }
+
+        .sidebar {
+            width: 60px;
+            background: rgba(5, 10, 25, 0.92);
+            border-right: 1px solid var(--border); display: flex;
+            flex-direction: column; align-items: center; padding: 20px 0; z-index: 100;
+        }
+        .sidebar.locked .nav-item:not(.special-btn) { opacity: 0.05; pointer-events: none; }
+
+        .logo-btn {
+            font-family: 'Cinzel', serif;
+            width: 32px; height: 32px;
+            border: 1px solid var(--accent);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; color: var(--accent); margin-bottom: 30px; cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .nav-item {
+            width: 42px; height: 42px;
+            color: #64748b; cursor: pointer;
+            margin-bottom: 12px; border: none; background: transparent;
+            display: flex; align-items: center; justify-content: center; transition: 0.3s;
+            font-size: 20px;
+        }
+        .nav-item:hover { color: var(--accent); }
+        .nav-item.active { color: var(--accent); border-left: 2px solid var(--accent); }
+
+        input {
+            background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255,255,255,0.1);
+            padding: 10px; color: white; margin-bottom: 15px;
+            width: 100%; text-align: center; outline: none; font-size: 0.8rem;
+        }
+        button.primary-btn {
+            background: transparent; color: var(--accent); border: 1px solid var(--accent);
+            padding: 10px; cursor: pointer; font-weight: 600; width: 100%;
+            text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.75rem;
+            font-family: 'Cinzel', serif;
+        }
+        button.primary-btn:hover { background: var(--accent); color: black; }
+
+        button.primary-btn[onclick*="resetTotal"]:hover {
+            background: var(--accent) !important;
+            color: #000 !important;
+            border-color: var(--accent) !important;
+        }
+
+        .main-content { flex-grow: 1; position: relative; display: flex; flex-direction: column; }
+        #content-frame {
+            width: 100%; height: 100%; border: none;
+            display: none; background: white; border-radius: 10px 0 0 0;
+        }
+
+        .welcome {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+
+        /* ── Cartões de módulo na tela inicial ── */
+        .modules-grid {
+            display: flex; gap: 22px; flex-wrap: wrap; justify-content: center;
+            max-width: 820px; margin-top: 45px;
+        }
+        .module-card {
+            background: rgba(10, 20, 40, 0.7);
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            padding: 32px 26px; width: 330px; cursor: pointer;
+            transition: all 0.3s ease; text-align: center; border-radius: 2px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+        }
+        .module-card:hover {
+            border-color: var(--accent);
+            background: rgba(20, 30, 50, 0.85);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        }
+        .module-icon {
+            font-size: 2.6rem; margin-bottom: 16px; display: block;
+            filter: drop-shadow(0 4px 12px rgba(212, 175, 55, 0.25));
+        }
+        .module-card h3 {
+            font-family: 'Cinzel', serif; font-size: 0.95rem;
+            color: var(--accent); margin-bottom: 10px;
+            letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700;
+        }
+        .module-card p {
+            font-size: 0.72rem; color: #94a3b8; line-height: 1.6;
+            letter-spacing: 0.03em;
+        }
+        .module-card small {
+            display: block; margin-top: 14px; font-size: 0.6rem;
+            color: #64748b; letter-spacing: 0.1em; text-transform: uppercase;
+        }
+        .welcome-hint {
+            margin-top: 40px; font-size: 0.62rem; color: #475569;
+            letter-spacing: 0.2em; text-transform: uppercase; text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="fundo-background"></div>
+
+<!-- ─────────────── LOGIN ─────────────── -->
+<div id="login-overlay" style="display: none; opacity: 0;">
+    <div class="glass-card">
+        <div class="logo-btn" style="margin: 0 auto 20px auto;">A</div>
+        <h2 class="titulo-master" style="font-size: 1.3rem;">Auditoria Contratual</h2>
+        <p class="subtitulo-master" style="margin-bottom: 25px;">Acesso Reservado</p>
+        <input type="password" id="senhaSistema" placeholder="Senha">
+        <button class="primary-btn" onclick="fazerLogin()">Entrar</button>
+    </div>
+</div>
+
+<!-- ─────────────── CONFIGURAÇÕES ─────────────── -->
+<div id="config-modal" style="position: fixed; inset: 0; display: none; z-index: 2000; pointer-events: none;">
+    <div class="glass-card" style="position: absolute; bottom: 90px; left: 70px; width: 320px; border: 1px solid var(--accent); max-height: calc(100vh - 140px); overflow-y: auto; pointer-events: auto; background: rgba(10, 20, 40, 0.95); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7); text-align: left;">
+
+        <div style="text-align: center; margin-bottom: 18px;">
+            <h2 style="font-family: 'Cinzel', serif; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px;">Configurações</h2>
+            <div style="height: 1px; background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.55), transparent); margin: 0 auto; width: 85%;"></div>
+        </div>
+
+        <h3 style="font-family: 'Cinzel'; margin-bottom: 20px; font-size: 0.85rem; color: #cbd5e1; text-align: center; letter-spacing: 0.05em;">Segurança</h3>
+
+        <input type="password" id="senhaAtual" placeholder="Senha Atual">
+        <input type="password" id="senhaNova" placeholder="Nova Senha">
+        <button class="primary-btn" onclick="salvarNovaSenha()">Gravar</button>
+        <button class="primary-btn" onclick="backupCompleto()" style="margin-top: 10px; border-color: #4dafff; color: #6bc4ff; font-size: 0.65rem;">📥 Backup Completo</button>
+        <button class="primary-btn" onclick="abrirRestauracaoCompleta()" style="margin-top: 10px; border-color: #b8b8b8; color: #ddd; font-size: 0.65rem;">📤 Restaurar Completo</button>
+        <button class="primary-btn" onclick="resetTotal()" style="margin-top: 10px; border-color: #ff0000; color: #ff0000; font-size: 0.6rem; background: rgba(255,0,0,0.08);">🚨 RESET TOTAL (APAGAR TUDO)</button>
+        <button class="primary-btn" onclick="abrirAvisoBackupPelasConfiguracoes()" style="margin-top: 10px; border-color: rgba(212,175,55,0.55); font-size: 0.65rem;">⚠️ Política de Uso e Backup</button>
+        <button class="primary-btn" onclick="fecharConfig()" style="border-color: #444; color: #888; margin-top: 10px;">Voltar</button>
+    </div>
+</div>
+
+<!-- ─────────────── SIDEBAR ─────────────── -->
+<nav class="sidebar" id="sidebar">
+    <div class="logo-btn" onclick="goHome()" title="Voltar ao início">A</div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MÓDULOS — se renomear os arquivos, ajuste as URLs aqui
+         e também no objeto MODULES no JavaScript.
+         ═══════════════════════════════════════════════════════════ -->
+    <button class="nav-item" title="Auditor de Locação" onclick="openModule('Auditor%20de%20Loca%C3%A7%C3%A3o.html', this)">🏠</button>
+    <button class="nav-item" title="Auditor de Compra e Venda" onclick="openModule('Auditor%20de%20Compra%20%26%20Venda.html', this)">🏡</button>
+
+    <div style="margin-top: auto;">
+        <button class="nav-item special-btn" title="Configurações" aria-label="Configurações" onclick="abrirConfig()">⚙️</button>
+        <button class="nav-item special-btn" title="Bloquear" aria-label="Bloquear" onclick="fazerLogout()">🔒</button>
+    </div>
+</nav>
+
+<!-- ─────────────── ÁREA PRINCIPAL ─────────────── -->
+<main class="main-content">
+    <div id="welcome-screen" class="welcome">
+        <h2 class="titulo-master">Auditoria Contratual</h2>
+        <p class="subtitulo-master">Suite de Análise Jurídica</p>
+
+        <div class="modules-grid">
+            <div class="module-card" onclick="openModuleByName('locacao')">
+                <span class="module-icon">🏠</span>
+                <h3>Auditor de Locação</h3>
+                <p>Analisa contratos de locação residencial contra a Lei do Inquilinato (Lei 8.245/91).</p>
+                <small>10 regras · Art. 4º, 17, 22, 23, 35, 37, 45, 58</small>
+            </div>
+            <div class="module-card" onclick="openModuleByName('compra-venda')">
+                <span class="module-icon">🏡🚗</span>
+                <h3>Auditor de Compra e Venda</h3>
+                <p>Analisa contratos de compra e venda de imóvel ou veículo contra o Código Civil.</p>
+                <small>14 regras · Arts. 104, 125, 412, 417, 441, 447, 481, 500</small>
+            </div>
+        </div>
+
+        <div class="welcome-hint">Use o menu lateral para alternar entre os módulos</div>
+    </div>
+    <iframe id="content-frame"></iframe>
+</main>
+
+<!-- ─────────────── POLÍTICA DE USO ─────────────── -->
+<div id="backup-modal" style="position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: none; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(10px);">
+    <div class="glass-card" style="width: 480px; max-width: 90%; border: 1px solid var(--accent); text-align: left; padding: 30px;">
+        <h3 style="font-family: 'Cinzel'; margin-bottom: 15px; font-size: 1.1rem; color: var(--accent); text-align: center;">POLÍTICA DE USO & BACKUP DE DADOS</h3>
+
+        <div style="font-size: 0.8rem; line-height: 1.6; color: #cbd5e1; margin-bottom: 20px; max-height: 350px; overflow-y: auto; padding-right: 5px;">
+            <p style="margin-bottom: 12px;">
+                <strong>1. Armazenamento Local:</strong><br>
+                Este sistema opera de forma local e armazena suas informações diretamente na memória do seu navegador web (<em>LocalStorage</em> e <em>IndexedDB</em>). Não há servidor externo ou banco de dados em nuvem sincronizando suas informações.
+            </p>
+
+            <p style="margin-bottom: 12px;">
+                <strong>2. Responsabilidade pelos Dados e Backups:</strong><br>
+                A realização de backups periódicos é de <strong>total e exclusiva responsabilidade do usuário</strong>. Utilize regularmente a funcionalidade de backup disponível em <em>Configurações → Backup Completo</em> e salve os arquivos em local seguro (disco local, pen drive ou nuvem).
+            </p>
+
+            <div style="border-left: 3px solid #ff4d4d; padding: 10px 12px; margin-bottom: 12px; border-radius: 2px;">
+                <strong style="color: #ff6b6b;">3. Isenção de Responsabilidade:</strong><br>
+                O sistema, seus desenvolvedores e mantenedores <strong>não se responsabilizam por qualquer perda, corrupção ou eliminação de dados</strong> decorrentes de limpeza do navegador, formatação do dispositivo, falhas do sistema operacional, ação de antivírus ou ausência de cópias de segurança realizadas pelo usuário.
+            </div>
+        </div>
+
+        <button class="primary-btn" onclick="fecharAvisoBackup()">Estou Ciente e De Acordo</button>
+    </div>
+</div>
+
+<script>
+    /* ═══════════════════════════════════════════════════════════════
+     * SEGURANÇA / LOGIN
+     * ═══════════════════════════════════════════════════════════════ */
+    let SENHA_MESTRE = localStorage.getItem('senhaMaster') !== null ? localStorage.getItem('senhaMaster') : "";
+
+    function fazerLogin() {
+        if (document.getElementById('senhaSistema').value === SENHA_MESTRE) {
+            document.getElementById('login-overlay').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('sidebar').classList.remove('locked');
+            }, 500);
+        } else { alert("Senha Incorreta"); }
+        document.getElementById('senhaSistema').value = '';
+    }
+
+    function fazerLogout() {
+        goHome();
+        const overlay = document.getElementById('login-overlay');
+        overlay.style.display = 'flex';
+        setTimeout(() => { overlay.style.opacity = '1'; }, 10);
+        document.getElementById('sidebar').classList.add('locked');
+    }
+
+    function abrirConfig() { document.getElementById('config-modal').style.display = 'flex'; }
+    function fecharConfig() { document.getElementById('config-modal').style.display = 'none'; }
+
+    function salvarNovaSenha() {
+        if (document.getElementById('senhaAtual').value === SENHA_MESTRE) {
+            const nova = document.getElementById('senhaNova').value;
+            SENHA_MESTRE = nova;
+            localStorage.setItem('senhaMaster', nova);
+
+            if (nova === "") {
+                alert("Senha removida com sucesso! Agora o acesso é direto.");
+            } else {
+                alert("Senha alterada com sucesso!");
+            }
+
+            fecharConfig();
+            document.getElementById('senhaAtual').value = '';
+            document.getElementById('senhaNova').value = '';
+        } else {
+            alert("Senha atual incorreta.");
+        }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+     * NAVEGAÇÃO ENTRE MÓDULOS
+     * ═══════════════════════════════════════════════════════════════ */
+    // Mapa central: ajuste aqui se renomear os arquivos
+    const MODULES = {
+        'locacao':      { url: 'Auditor%20de%20Loca%C3%A7%C3%A3o.html',         idx: 0 },
+        'compra-venda': { url: 'Auditor%20de%20Compra%20%26%20Venda.html',      idx: 1 }
+    };
+
+    function openModule(url, btn) {
+        if (document.getElementById('sidebar').classList.contains('locked')) return;
+        document.getElementById('welcome-screen').style.display = 'none';
+        const frame = document.getElementById('content-frame');
+        frame.style.display = 'block';
+        frame.src = url;
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+    }
+
+    function openModuleByName(tipo) {
+        const info = MODULES[tipo];
+        if (!info) return;
+        const btn = document.querySelectorAll('.nav-item:not(.special-btn)')[info.idx];
+        openModule(info.url, btn);
+    }
+
+    function goHome() {
+        document.getElementById('welcome-screen').style.display = 'flex';
+        const frame = document.getElementById('content-frame');
+        frame.style.display = 'none';
+        frame.src = 'about:blank';
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    }
+
+    document.getElementById('senhaSistema').addEventListener('keypress', (e) => { if (e.key === 'Enter') fazerLogin(); });
+
+    /* Fechar popup de Configurações ao clicar fora */
+    document.addEventListener('click', function (e) {
+        const modal = document.getElementById('config-modal');
+        if (modal.style.display === 'flex' &&
+            !e.target.closest('#config-modal') &&
+            !e.target.closest('[onclick*="abrirConfig"]')) {
+            fecharConfig();
+        }
+    });
+
+    function abrirAvisoBackupPelasConfiguracoes() {
+        fecharConfig();
+        document.getElementById('backup-modal').style.display = 'flex';
+    }
+    function fecharAvisoBackup() {
+        document.getElementById('backup-modal').style.display = 'none';
+        abrirConfig();
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+     * FECHAR IFRAME ANTES DE OPERAR (libera conexões IDB)
+     * ═══════════════════════════════════════════════════════════════ */
+    async function _fecharIframe() {
+        try {
+            const frame = document.getElementById('content-frame');
+            if (frame && frame.style.display !== 'none' && frame.src && frame.src !== 'about:blank') {
+                await new Promise(resolve => {
+                    frame.addEventListener('load', () => resolve(), { once: true });
+                    frame.src = 'about:blank';
+                    setTimeout(resolve, 1500);
+                });
+            }
+            goHome();
+        } catch (e) { /* segue em frente */ }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+     * UTILITÁRIOS GERAIS
+     * ═══════════════════════════════════════════════════════════════ */
+    function _coletarTudoLocalStorage() {
+        const tudo = {};
+        Object.keys(localStorage).forEach(k => {
+            tudo[k] = localStorage.getItem(k);
+        });
+        return tudo;
+    }
+
+    function _baixarJSON(obj, nomeArquivo) {
+        const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = nomeArquivo;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+
+    /* GERADOR DE NOME DE ARQUIVO NO PADRÃO
+     * <Prefixo>_<AAAA>_<DD-MM-AAAA>_<HH>h<MM>.json
+     */
+    function _nomeArquivoTimestamp(prefixo) {
+        const agora = new Date();
+        const ano = agora.getFullYear();
+        const dia = String(agora.getDate()).padStart(2, '0');
+        const mes = String(agora.getMonth() + 1).padStart(2, '0');
+        const horas = String(agora.getHours()).padStart(2, '0');
+        const minutos = String(agora.getMinutes()).padStart(2, '0');
+        return `${prefixo}_${ano}_${dia}-${mes}-${ano}_${horas}h${minutos}.json`;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+     * INDEXEDDB — EXPORTAÇÃO
+     * ═══════════════════════════════════════════════════════════════ */
+    async function _coletarTodoIndexedDB() {
+        if (!window.indexedDB) return { _aviso: 'IndexedDB não disponível' };
+        if (typeof indexedDB.databases !== 'function') {
+            return { _aviso: 'indexedDB.databases() não suportado neste navegador' };
+        }
+
+        let bancos = [];
+        try {
+            bancos = await indexedDB.databases();
+        } catch (e) {
+            return { _aviso: 'Falha ao enumerar bancos: ' + e.message };
+        }
+
+        const resultado = {};
+        for (const info of bancos) {
+            if (!info || !info.name) continue;
+            try {
+                resultado[info.name] = await _exportarBancoIDB(info.name);
+            } catch (e) {
+                resultado[info.name] = { _erro: e.message };
+            }
+        }
+        return resultado;
+    }
+
+    async function _exportarBancoIDB(nome) {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(nome);
+
+            req.onerror = () => reject(req.error || new Error('open falhou'));
+            req.onblocked = () => reject(new Error('bloqueado por outra aba'));
+            req.onsuccess = async () => {
+                const db = req.result;
+                const exportado = { version: db.version, stores: {} };
+
+                try {
+                    const nomes = Array.from(db.objectStoreNames);
+                    for (const storeName of nomes) {
+                        exportado.stores[storeName] = await _exportarStoreIDB(db, storeName);
+                    }
+                    db.close();
+                    resolve(exportado);
+                } catch (e) {
+                    try { db.close(); } catch (_) {}
+                    reject(e);
+                }
+            };
+        });
+    }
+
+    async function _exportarStoreIDB(db, storeName) {
+        return new Promise((resolve, reject) => {
+            let tx;
+            try {
+                tx = db.transaction(storeName, 'readonly');
+            } catch (e) {
+                reject(e); return;
+            }
+
+            const store = tx.objectStore(storeName);
+
+            const indexes = {};
+            Array.from(store.indexNames).forEach(idxName => {
+                const idx = store.index(idxName);
+                indexes[idxName] = {
+                    keyPath: idx.keyPath,
+                    unique: !!idx.unique,
+                    multiEntry: !!idx.multiEntry
+                };
+            });
+
+            const reqVal = store.getAll();
+            const reqKey = store.getAllKeys();
+
+            let values = null, keys = null;
+
+            function tentar() {
+                if (values === null || keys === null) return;
+                const records = [];
+                for (let i = 0; i < values.length; i++) {
+                    records.push({ key: keys[i], value: values[i] });
+                }
+                resolve({
+                    keyPath: store.keyPath,
+                    autoIncrement: !!store.autoIncrement,
+                    indexes: indexes,
+                    records: records
+                });
+            }
+
+            reqVal.onsuccess = () => { values = reqVal.result; tentar(); };
+            reqKey.onsuccess = () => { keys = reqKey.result; tentar(); };
+            reqVal.onerror = () => reject(reqVal.error || new Error('getAll falhou'));
+            reqKey.onerror = () => reject(reqKey.error || new Error('getAllKeys falhou'));
+        });
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+     * INDEXEDDB — RESTAURAÇÃO
+     * ═══════════════════════════════════════════════════════════════ */
+    async function _restaurarIndexedDB(backupIDB) {
+        const relatorio = {
+            bancosTotal: 0,
+            bancosOk: 0,
+            registrosTotal: 0,
+            falhas: []
+        };
+
+        if (!backupIDB || typeof backupIDB !== 'object') return relatorio;
+        if (backupIDB._aviso) {
+            relatorio.falhas.push('Aviso do backup: ' + backupIDB._aviso);
+            return relatorio;
+        }
+
+        const nomes = Object.keys(backupIDB).filter(n => !n.startsWith('_'));
+        relatorio.bancosTotal = nomes.length;
+
+        for (const nome of nomes) {
+            const dadosBanco = backupIDB[nome];
+            if (!dadosBanco || dadosBanco._erro) {
+                relatorio.falhas.push(nome + ': ' + ((dadosBanco && dadosBanco._erro) || 'dados ausentes'));
+                continue;
+            }
+            try {
+                const count = await _recriarBancoIDB(nome, dadosBanco);
+                relatorio.bancosOk++;
+                relatorio.registrosTotal += count;
+            } catch (e) {
+                relatorio.falhas.push(nome + ': ' + e.message);
+            }
+        }
+
+        return relatorio;
+    }
+
+    async function _recriarBancoIDB(nome, dadosBanco) {
+        await new Promise(resolve => {
+            const req = indexedDB.deleteDatabase(nome);
+            req.onsuccess = () => resolve();
+            req.onerror = () => resolve();
+            req.onblocked = () => resolve();
+        });
+
+        const version = dadosBanco.version || 1;
+        const stores = dadosBanco.stores || {};
+
+        let registrosGravados = 0;
+
+        await new Promise((resolve, reject) => {
+            const req = indexedDB.open(nome, version);
+
+            req.onerror = () => reject(req.error || new Error('open falhou'));
+            req.onblocked = () => reject(new Error('bloqueado por outra aba'));
+
+            req.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                for (const [storeName, storeDef] of Object.entries(stores)) {
+                    const opts = {};
+                    if (storeDef.keyPath !== null && storeDef.keyPath !== undefined) {
+                        opts.keyPath = storeDef.keyPath;
+                    }
+                    if (storeDef.autoIncrement) {
+                        opts.autoIncrement = true;
+                    }
+                    const store = db.createObjectStore(storeName, opts);
+
+                    for (const [idxName, idxDef] of Object.entries(storeDef.indexes || {})) {
+                        store.createIndex(idxName, idxDef.keyPath, {
+                            unique: !!idxDef.unique,
+                            multiEntry: !!idxDef.multiEntry
+                        });
+                    }
+                }
+            };
+
+            req.onsuccess = async () => {
+                const db = req.result;
+
+                try {
+                    for (const [storeName, storeDef] of Object.entries(stores)) {
+                        const records = storeDef.records || [];
+                        if (!records.length) continue;
+
+                        const temKeyPath = storeDef.keyPath !== null && storeDef.keyPath !== undefined;
+
+                        const tx = db.transaction(storeName, 'readwrite');
+                        const store = tx.objectStore(storeName);
+
+                        for (const rec of records) {
+                            try {
+                                if (temKeyPath) {
+                                    store.put(rec.value);
+                                } else {
+                                    store.put(rec.value, rec.key);
+                                }
+                                registrosGravados++;
+                            } catch (e) {
+                                // tx contabiliza no final
+                            }
+                        }
+
+                        await new Promise((res, rej) => {
+                            tx.oncomplete = () => res();
+                            tx.onerror = () => rej(tx.error);
+                            tx.onabort = () => rej(tx.error || new Error('transação abortada'));
+                        });
+                    }
+                    db.close();
+                    resolve();
+                } catch (e) {
+                    try { db.close(); } catch (_) {}
+                    reject(e);
+                }
+            };
+        });
+
+        return registrosGravados;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+     * BACKUP COMPLETO — localStorage + IndexedDB
+     * ═══════════════════════════════════════════════════════════════ */
+    async function backupCompleto() {
+        fecharConfig();
+        await _fecharIframe();
+
+        const ls = _coletarTudoLocalStorage();
+        const idb = await _coletarTodoIndexedDB();
+
+        const totalLS = Object.keys(ls).length;
+        const nomesIDB = Object.keys(idb).filter(n => !n.startsWith('_'));
+        let totalRegIDB = 0;
+        nomesIDB.forEach(nome => {
+            const banco = idb[nome];
+            if (banco && banco.stores) {
+                Object.values(banco.stores).forEach(store => {
+                    totalRegIDB += (store.records || []).length;
+                });
+            }
+        });
+
+        const payload = {
+            tipo: 'backup-auditoria-completo',
+            versao: 1,
+            geradoEm: new Date().toISOString(),
+            senhaMaster: SENHA_MESTRE,
+            localStorage: ls,
+            indexedDB: idb
+        };
+
+        _baixarJSON(payload, _nomeArquivoTimestamp('Backup_Auditoria'));
+
+        alert(
+            `📥 Backup Completo Gerado!\n\n` +
+            `• LocalStorage: ${totalLS} chave(s)\n` +
+            `• IndexedDB: ${nomesIDB.length} banco(s), ${totalRegIDB} registro(s)\n\n` +
+            `O arquivo foi baixado. Guarde-o em local seguro.`
+        );
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+     * RESTAURAÇÃO COMPLETA
+     * ═══════════════════════════════════════════════════════════════ */
+    function abrirRestauracaoCompleta() {
+        fecharConfig();
+
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,application/json';
+        input.onchange = e => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async ev => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+
+                    if (data.tipo !== 'backup-auditoria-completo') {
+                        if (!confirm('⚠️ Este arquivo não parece ser um backup completo do sistema.\n\nDeseja continuar mesmo assim?')) return;
+                    }
+
+                    if (!confirm(
+                        '⚠️ ATENÇÃO: A restauração irá SUBSTITUIR os dados atuais do localStorage e recriar os bancos do IndexedDB.\n\n' +
+                        'Deseja continuar?'
+                    )) return;
+
+                    await _fecharIframe();
+
+                    // 1) Restaurar localStorage
+                    if (data.localStorage && typeof data.localStorage === 'object') {
+                        Object.keys(data.localStorage).forEach(k => {
+                            try { localStorage.setItem(k, data.localStorage[k]); } catch (_) {}
+                        });
+                    }
+
+                    // 2) Restaurar senha master, se presente
+                    if (typeof data.senhaMaster === 'string') {
+                        localStorage.setItem('senhaMaster', data.senhaMaster);
+                    }
+
+                    // 3) Restaurar IndexedDB
+                    let rel = null;
+                    if (data.indexedDB) {
+                        rel = await _restaurarIndexedDB(data.indexedDB);
+                    }
+
+                    let msg = '✅ Backup restaurado com sucesso!\n\nA página será recarregada.';
+                    if (rel) {
+                        msg += `\n\nIndexedDB:\n• Bancos restaurados: ${rel.bancosOk}/${rel.bancosTotal}\n• Registros gravados: ${rel.registrosTotal}`;
+                        if (rel.falhas.length) {
+                            msg += `\n\nFalhas:\n• ${rel.falhas.join('\n• ')}`;
+                        }
+                    }
+                    alert(msg);
+                    location.reload();
+                } catch (err) {
+                    console.error(err);
+                    alert('❌ Arquivo inválido ou corrompido: ' + err.message);
+                }
+            };
+            reader.readAsText(file, 'utf-8');
+        };
+        input.click();
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+     * RESET TOTAL
+     * ═══════════════════════════════════════════════════════════════ */
+    async function resetTotal() {
+        if (!confirm(
+            '🚨 ATENÇÃO: Isso irá APAGAR TODOS os dados do sistema:\n\n' +
+            '• Todo o LocalStorage (senha, textos, configurações)\n' +
+            '• Todos os bancos do IndexedDB\n\n' +
+            'Esta ação é IRREVERSÍVEL.\n\nDeseja continuar?'
+        )) return;
+
+        if (!confirm('⚠️ CONFIRMAÇÃO FINAL:\n\nTODOS os dados serão PERDIDOS permanentemente.\n\nTem CERTEZA ABSOLUTA?')) return;
+
+        fecharConfig();
+        await _fecharIframe();
+
+        // 1) Limpar localStorage
+        try { localStorage.clear(); } catch (_) {}
+
+        // 2) Apagar todos os bancos IndexedDB
+        try {
+            if (typeof indexedDB.databases === 'function') {
+                const bancos = await indexedDB.databases();
+                for (const info of bancos) {
+                    if (!info || !info.name) continue;
+                    await new Promise(resolve => {
+                        const req = indexedDB.deleteDatabase(info.name);
+                        req.onsuccess = () => resolve();
+                        req.onerror = () => resolve();
+                        req.onblocked = () => resolve();
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn('Falha ao apagar IndexedDB:', e);
+        }
+
+        alert('🧹 Reset concluído. A página será recarregada.');
+        location.reload();
+    }
+</script>
+</body>
+</html>
