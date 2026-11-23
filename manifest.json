@@ -4,7 +4,7 @@
   "short_name": "Auditoria",
   "description": "Suíte de análise jurídica e auditoria contratual.",
   "lang": "pt-BR",
-  "start_url": "./auditoria-contratual/",
+  "start_url": "/auditoria-contratual/",
   "scope": "/auditoria-contratual/",
   "display": "standalone",
   "orientation": "any",
